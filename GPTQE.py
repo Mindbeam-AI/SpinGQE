@@ -19,7 +19,7 @@ class GPTQE(GPT):
         logits = self.lm_head(x)  # convert layer to logits
         return logits
 
-    def calculate_loss(self, tokens, energies, b1):
+    def calculate_loss(self, tokens, energies, b1=None):
         current_tokens, next_tokens = tokens[:, :-1], tokens[:, 1:]
         # calculate the logits for the next possible tokens in the sequence
         logits = self(current_tokens)
@@ -32,111 +32,16 @@ class GPTQE(GPT):
         cumsum_logits = torch.cumsum(next_token_logits, dim=1)
         # match cumulative logits to subsequence energies
 
-        weights = 1 / (1 + torch.exp(b1 * energies))  # freeze gradient for true energy
-        # weights = weights / weights.sum() * len(weights)
-
-        # loss = torch.mean(weights * torch.exp(b2 * torch.abs(cumsum_logits - energies)))
-        loss = torch.mean(weights * torch.square(cumsum_logits - energies))
-
-        return loss
-
-    def calculate_loss_GRPO(self, tokens, energies, epsilon, old_model=None):
-
-        # --- Step 1: current log-probs ---
-        logits = self(tokens[:, :-1])  # predict next-token logits
-        log_probs = F.log_softmax(logits, dim=-1)
-        curr_log_probs = log_probs.gather(-1, tokens[:, 1:].unsqueeze(-1)).squeeze(-1)  # [B, T-1]
-
-        # --- Step 2: old log-probs (frozen policy) ---
-        if old_model is not None:
-            with torch.no_grad():
-                old_logits = old_model(tokens[:, :-1])
-                old_log_probs = F.log_softmax(old_logits, dim=-1)
-                old_log_probs = old_log_probs.gather(-1, tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
+        if b1 is None:
+            loss = torch.mean(torch.square(cumsum_logits - energies))
         else:
-            old_log_probs = curr_log_probs.detach()
+            weights = 1 / (1 + torch.exp(b1 * energies))  # freeze gradient for true energy
+            # weights = weights / weights.sum() * len(weights)
+            # loss = torch.mean(weights * torch.exp(b2 * torch.abs(cumsum_logits - energies)))
+            loss = torch.mean(weights * torch.square(cumsum_logits - energies))
+            uw_loss = torch.mean(torch.square(cumsum_logits - energies))
 
-        # --- Step 3: rewards & normalized advantages (per token) ---
-        rewards = -energies                # [B, T-1] (skip start token)
-        mean_r = rewards.mean()
-        std_r = rewards.std(unbiased=False) + 1e-8
-        advantages = (rewards - mean_r) / std_r          # Â_{m,k}
-
-        # --- Step 4: importance ratios & clipping ---
-        ratios = torch.exp(curr_log_probs - old_log_probs)
-        ratios_clipped = torch.clamp(ratios, 1 - epsilon, 1 + epsilon)
-
-        # --- Step 5: GRPO loss (Eq. 9 generalised to per-step rewards) ---
-        loss = -torch.mean(ratios_clipped * advantages)
-
-        # print({
-        #     "r_mean": rewards.mean().item(),
-        #     "r_std": rewards.std().item(),
-        #     "A_mean": advantages.mean().item(),
-        #     "A_std": advantages.std().item(),
-        #     "ratio_mean": ratios.mean().item(),
-        #     "ratio_std": ratios.std().item(),
-        #     "loss": loss.item(),
-        # })
-        return loss, advantages
-
-    def calculate_loss_DPO(self, tokens, energies, beta, ref_model=None):
-        M, T = tokens.shape
-
-        energies = energies.detach()
-        energies = (energies - energies.mean()) / (energies.std() + 1e-6)
-
-        logits = self(tokens[:, :-1])
-        # ref_logits = ref_model(tokens[:, :-1])
-
-        log_probs = F.log_softmax(logits, dim=-1)
-        token_logp = log_probs.gather(-1, tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
-        logp = token_logp.sum(dim=-1)
-
-        logp_ref = -energies
-        log_ratio = logp - logp_ref
-
-        best_idx = energies.argmin()
-        best_log_ratio = logp[best_idx] - logp_ref[best_idx]
-
-        mask = torch.arange(M).to("cuda") != best_idx
-        diff = best_log_ratio - log_ratio[mask]
-
-        loss = F.softplus(-beta * diff)
-        return loss.mean()
-
-    def calculate_loss_CPO(self, tokens, energies, beta, ref_model=None):
-        M, T = tokens.shape
-
-        energies = energies.detach()
-        energies = (energies - energies.mean()) / (energies.std() + 1e-6)
-
-        logits = self(tokens[:, :-1])
-
-        log_probs = F.log_softmax(logits, dim=-1)
-        token_logp = log_probs.gather(-1, tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
-        logp = token_logp.sum(dim=-1)          # (M,)
-
-        # Boltzmann reference
-        if ref_model is None:
-            logp_ref = -energies                   # (M,)
-        else:
-            ref_logits = ref_model(tokens[:, :-1])
-            ref_log_probs = F.log_softmax(ref_logits, dim=-1)
-            ref_token_logp = ref_log_probs.gather(-1, tokens[:, 1:].unsqueeze(-1)).squeeze(-1)
-            logp_ref = ref_token_logp.sum(dim=-1)
-
-        log_ratio = logp - logp_ref
-
-        best_idx = energies.argmin()
-        best_log_ratio = logp[best_idx] - logp_ref[best_idx]
-
-        mask = torch.arange(M).to("cuda") != best_idx
-        diff = best_log_ratio - log_ratio[mask]
-
-        dpo_term = F.softplus(-beta * diff)
-        loss = dpo_term - logp[best_idx]
-        return loss.mean()
+        return loss, uw_loss
 
     @torch.no_grad()
     def generate(self, n_sequences, max_new_tokens, temperature=1.0, device="cpu"):
