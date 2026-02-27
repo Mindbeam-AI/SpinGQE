@@ -26,7 +26,7 @@ This repository implements the Generative Quantum Eigensolver (GQE), a novel app
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/GPT-QE.git
+git clone https://github.com/Mindbeam-AI/GPT-QE.git
 cd GPT-QE
 ```
 
