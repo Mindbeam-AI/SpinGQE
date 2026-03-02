@@ -1,14 +1,14 @@
-# Generative Quantum Eigensolver (GQE) for Spin Hamiltonians
+# SpinGQE - A generative quantum eigensolver for spin Hamiltonians
 
 [![arXiv](https://img.shields.io/badge/arXiv-XXXX.XXXXX-b31b1b.svg)](https://arxiv.org/abs/XXXX.XXXXX)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Official implementation of **"Generative quantum eigensolver for qubit-based Hamiltonians"** by Alexander Holden, Moinul Hossain Rahat, and Nii Osae Osae Dade.
+Official implementation of **"SpinGQE - A generative quantum eigensolver for spin Hamiltonians"** by Alexander Holden, Moinul Hossain Rahat, and Nii Osae Osae Dade.
 
 ## Overview
 
-This repository implements the Generative Quantum Eigensolver (GQE), a novel approach to quantum ground state search that reframes circuit design as a generative modeling task. Instead of optimizing continuous parameters within a fixed ansatz like traditional VQE methods, GQE uses a transformer-based decoder to learn distributions over quantum circuits that produce low-energy states.
+This repository implements the SpinGQE, a novel approach to quantum ground state search that reframes circuit design as a generative modeling task. Instead of optimizing continuous parameters within a fixed ansatz like traditional VQE methods, SpinGQE uses a transformer-based decoder to learn distributions over quantum circuits that produce low-energy states for spin Hamiltonians.
 
 **Key Features:**
 - **Generative approach**: Transformer model learns to generate quantum circuits
@@ -26,7 +26,7 @@ This repository implements the Generative Quantum Eigensolver (GQE), a novel app
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/Mindbeam-AI/GPT-QE.git
+git clone https://github.com/Mindbeam-AI/SpinGQE.git
 cd GPT-QE
 ```
 
@@ -94,7 +94,7 @@ n_embd = 384            # Embedding dimension
 ## Repository Structure
 
 ```
-GPT-QE/
+SpinGQE/
 ├── train.py           # Main training script
 ├── GPTQE.py          # GQE model class with loss functions
 ├── model.py          # Transformer architecture (nano-GPT based)
@@ -233,7 +233,7 @@ Expected results:
 
 ## Model Architecture
 
-The GQE framework consists of:
+The SpinGQE framework consists of:
 
 1. **Transformer Decoder**: Generates sequences of quantum gates
    - Input: Token representing gate from operator pool
@@ -300,24 +300,6 @@ Training produces the following outputs in the specified directory:
 ```
 
 ## Advanced Usage
-
-### Custom Loss Functions
-
-The `GPTQE.py` module includes alternative loss functions:
-
-```python
-# Default: Weighted MSE
-loss = model.calculate_loss(tokens, energies, beta)
-
-# Group Relative Policy Optimization
-loss = model.calculate_loss_GRPO(tokens, energies, epsilon)
-
-# Direct Preference Optimization
-loss = model.calculate_loss_DPO(tokens, energies, beta)
-
-# Conservative Policy Optimization
-loss = model.calculate_loss_CPO(tokens, energies, beta)
-```
 
 ### Multi-GPU Training
 
@@ -388,11 +370,11 @@ Then update `gen_hamiltonian()` to include your label.
 If you use this code in your research, please cite:
 
 ```bibtex
-@article{holden2025gqe,
-  title={Generative quantum eigensolver for qubit-based Hamiltonians},
+@article{holden2026gqe,
+  title={SpinGQE - A generative quantum eigensolver for spin Hamiltonians},
   author={Holden, Alexander and Rahat, Moinul Hossain and Dade, Nii Osae Osae},
   journal={arXiv preprint arXiv:XXXX.XXXXX},
-  year={2025}
+  year={2026}
 }
 ```
 
@@ -407,7 +389,7 @@ This implementation builds upon:
 
 For questions or issues:
 - **Email**: research@mindbeam.ai
-- **Issues**: [GitHub Issues](https://github.com/Mindbeam-AI/GPT-QE/issues)
+- **Issues**: [GitHub Issues](https://github.com/Mindbeam-AI/SpinGQE/issues)
 
 ## Acknowledgments
 
