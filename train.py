@@ -12,11 +12,9 @@ import hvplot.pandas
 import matplotlib.pyplot as plt
 import pennylane as qml
 import random
-from GQEScheduler import GQEScheduler
 
 
 def build_operator_pool(n_qubits, t_values=None):
-# EXPERIMENT WITH ANGLE SELECTION FOR MONDAY
     if t_values is None:
         # t_values = [np.pi, np.pi/2, np.pi/3, np.pi/4, np.pi/8]
         t_values = [np.pi/2, np.pi/4, np.pi/8, np.pi/16, np.pi/32]
@@ -40,9 +38,9 @@ def build_operator_pool(n_qubits, t_values=None):
 
     # for i in range(n_qubits - 2):
     #     for t in t_values:
-            # pool.append(qml.PauliRot(t, 'ZZ', wires=[i, i + 2]))
-            # pool.append(qml.PauliRot(t, 'XX', wires=[i, i+2]))
-            # pool.append(qml.PauliRot(t, 'YY', wires=[i, i+2]))
+    #         pool.append(qml.PauliRot(t, 'ZZ', wires=[i, i + 2]))
+    #         pool.append(qml.PauliRot(t, 'XX', wires=[i, i+2]))
+    #         pool.append(qml.PauliRot(t, 'YY', wires=[i, i+2]))
 
     return pool
 
@@ -74,7 +72,7 @@ def get_subsequence_energies(seq, hamiltonian, init_state, num_qubits):
     return np.array(energies)
 
 
-def lod_model(load_dir):
+def load_model(load_dir):
     with open(f"{load_dir}/config.json") as f:
         config = json.load(f)
 
@@ -98,23 +96,41 @@ def lod_model(load_dir):
     return model, opt
 
 
-def model_config(size, seq_len, op_pool_size):
-    model, opt = None, None
-    if size == "small":
-        model = GPTQE(GPTConfig(
-            vocab_size=op_pool_size + 1,
-            block_size=seq_len,
-            dropout=0.2,
-            bias=False,
-            n_layer=4,
-            n_head=8,
-            n_embd=384
-        )).to("cuda")
+def main():
+    dir = f"heisenberg"
+    os.makedirs(f"{dir}/histo", exist_ok=True)
 
-        opt = model.configure_optimizers(
-            weight_decay=0.01, learning_rate=4e-4, betas=(0.9, 0.95), device_type="auto"
-        )
-    elif size == "medium":
+    seed = 1
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    # HYPERPARAMETERS
+    ham_label = 1
+    num_qubits = 4
+    seq_gen = 10 # number of generated circuits per epoch
+    seq_len = 12
+    temperature = .5
+    n_epochs = 700
+    n_batches = 10 # number of batches for training, n_batches ideally divides seq_gen
+    beta = .3
+    load_model = False
+
+    # data = joblib.load(f'./VQE-generated-dataset/data/ground_state/0{num_qubits}qubit/label{ham_label}.jb')
+    # grd_E = data["ground_energy"]
+
+    ham = gen_hamiltonian(ham_label, num_qubits, 10, 10)
+    grd_E = np.linalg.eigh(qml.matrix(ham))[0][0]
+    print(grd_E)
+    init_state = [0] * num_qubits
+    op_pool = np.array(build_operator_pool(num_qubits), dtype=object)
+    op_pool_size = len(op_pool)
+    print(op_pool_size)
+
+    if load_model:
+        model, opt = load_model("heisenberg_(t=.5,b=1)*")
+    else:
         model = GPTQE(GPTConfig(
             vocab_size=op_pool_size + 1,
             block_size=seq_len,
@@ -128,73 +144,21 @@ def model_config(size, seq_len, op_pool_size):
         opt = model.configure_optimizers(
             weight_decay=0.01, learning_rate=5e-5, betas=(0.9, 0.95), device_type="auto"
         )
-    elif size == "large":
-        model = GPTQE(GPTConfig(
-            vocab_size=op_pool_size + 1,
-            block_size=seq_len,
-            dropout=0.2,
-            bias=False,
-            n_layer=16,
-            n_head=12,
-            n_embd=768
-        )).to("cuda")
-
-        opt = model.configure_optimizers(
-            weight_decay=0.01, learning_rate=4e-4, betas=(0.9, 0.95), device_type="auto"
-        )
-
-    return model, opt
-
-
-def main():
-    dir = "heisenberg_(1,10)(M=10, b=0.3)(37M)"
-    os.makedirs(f"{dir}/histo", exist_ok=True)
-
-    seed = 1
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-
-    # HYPERPARAMETERS
-    ham_label = 1
-    num_qubits = 4
-    seq_gen = 10
-    seq_len = 12
-    temperature = .5
-    n_epochs = 700
-    n_batches = 10
-    beta = .3
-    load_model = False
-
-    data = joblib.load(f'./VQE-generated-dataset/data/ground_state/0{num_qubits}qubit/label{ham_label}.jb')
-    grd_E = data["ground_energy"]
-
-    ham = gen_hamiltonian(ham_label, num_qubits, 1, 10)
-    grd_E = np.linalg.eigh(qml.matrix(ham))[0][0]
-    print(grd_E)
-    init_state = [0] * num_qubits
-    op_pool = np.array(build_operator_pool(num_qubits), dtype=object)
-    op_pool_size = len(op_pool)
-    print(op_pool_size)
-
-    if load_model:
-        model, opt = load_model("heisenberg_(t=.5,b=1)*")
-    else:
-        model, opt = model_config("medium", seq_len, op_pool_size)
-
+    
     eval_iter = 50
     current_mae = 10000
     best_checkpoints = [0, 0, 0]
     best_checkpoint_energies = [10000, 10000, 10000]
     max_index = 0
-
+    best_min = 10000
+    best_epoch = 0
+    
     losses = []
     true_Es_t = []
     pred_Es_t = []
-
+    
     true_Es_g = []
-
+    
     for epoch in range(0, n_epochs+1):
         model.eval()
         with torch.no_grad():
@@ -204,21 +168,21 @@ def main():
                 temperature=temperature,
                 device="cuda"
             )
-
+    
             gen_inds = (tokens[:, 1:] - 1).cpu().numpy()
             gen_op_seq = op_pool[gen_inds]
-
+    
             energies = torch.from_numpy(get_subsequence_energies(gen_op_seq, ham, init_state, num_qubits)).to("cuda")
             true_Es_g.append(energies[:, -1].cpu().numpy().reshape(-1, 1))
             train_inds = np.arange(len(tokens))
-
+    
         model.train()
         np.random.shuffle(train_inds)
         token_batches = torch.tensor_split(tokens[train_inds], n_batches)
         energy_batches = torch.tensor_split(energies[train_inds], n_batches)
         loss_record = 0
         uw_loss_record = 0
-
+    
         for token_batch, energy_batch in zip(token_batches, energy_batches):
             opt.zero_grad()
             loss, uw_loss = model.calculate_loss(token_batch, energy_batch, beta)
@@ -226,12 +190,12 @@ def main():
             opt.step()
             loss_record += loss.item()
             uw_loss_record += uw_loss.item()
-
+    
         avg_loss = loss_record / n_batches
         avg_uw_loss = uw_loss_record / n_batches
-        losses.append(avg_uw_loss)
+        losses.append(avg_uw_loss) # if you need to generate a plot of the weighted losses, change line to losses.append(avg_loss)
         print(f"Epoch {epoch}: Loss: {avg_loss:.4f}, {avg_uw_loss}")
-
+    
         if epoch != 0 and epoch % eval_iter == 0:
             # for gpt evaluation
             model.eval()
@@ -242,21 +206,21 @@ def main():
                     temperature=temperature,
                     device="cuda",
                 )
-
+    
             pred_Es = pred_Es.detach().cpu().numpy()
-
+    
             gen_inds = (gen_token_seq[:, 1:] - 1).cpu().numpy()
             gen_op_seq = op_pool[gen_inds]
-
+    
             true_Es = get_subsequence_energies(gen_op_seq, ham, init_state, num_qubits)[:, -1].reshape(-1, 1)
-
+    
             mae = np.mean(np.abs(pred_Es - true_Es))
             ave_E = np.mean(true_Es)
             min_E = np.min(true_Es)
-
+    
             pred_Es_t.append(pred_Es)
             true_Es_t.append(true_Es)
-
+    
             # Counts how many times a gate is identical to the one before it
             stutters = 0
             total_gates = 0
@@ -266,9 +230,9 @@ def main():
                         stutters += 1
                     total_gates += 1
             r = stutters / total_gates
-
+    
             print(f"Iteration: {epoch}, Loss: {losses[-1]}, MAE: {mae}, Ave E: {ave_E}, Min E: {min_E}, Stutter Ratio: {r}")
-
+    
             plt.figure(figsize=(10, 5))
             plt.hist(pred_Es, bins=30, alpha=0.6, label='Predicted Energy')
             plt.hist(true_Es, bins=30, alpha=0.6, label='Measured Energy')
@@ -280,7 +244,7 @@ def main():
             plt.ylabel("Count")
             plt.savefig(f"{dir}/histo/{epoch}")
             plt.close()
-
+    
             if ave_E < best_checkpoint_energies[max_index]:
                 save_dict = {
                     "model_state_dict": model.state_dict(),
@@ -288,40 +252,44 @@ def main():
                     "epoch": epoch,  # optional
                 }
                 torch.save(save_dict, f"{dir}/checkpoint{epoch}.pt")
-
+    
                 best_checkpoints[max_index] = epoch
                 best_checkpoint_energies[max_index] = ave_E
                 max_index = best_checkpoint_energies.index(max(best_checkpoint_energies))
-
+    
+            if min_E < best_min:
+                best_min = min_E
+                best_epoch = epoch
+    
     df_loss = pd.DataFrame(losses)
     df_loss.to_csv(f"{dir}/losses.csv", index=False)
-
+    
     hvplot.extension('matplotlib')
-
+    
     loss_fig = df_loss.hvplot(
         title="Training loss progress", ylabel="loss", xlabel="Training epochs", logy=True
     ).opts(fig_size=600, fontscale=2, aspect=1.2)
-
+    
     hv.save(loss_fig, f"{dir}/loss_fig.png")
-
+    
     pred_Es_t = np.concatenate(pred_Es_t, axis=1)
     true_Es_t = np.concatenate(true_Es_t, axis=1)
-
+    
     df_pred = pd.DataFrame(pred_Es_t, columns=list(range(eval_iter, n_epochs+1, eval_iter)))
     df_true = pd.DataFrame(true_Es_t, columns=list(range(eval_iter, n_epochs+1, eval_iter)))
-
+    
     df_pred.to_csv(f"{dir}/pred_Es_t.csv", index=False)
     df_true.to_csv(f"{dir}/true_Es_t.csv", index=False)
-
+    
     df_true.columns = df_true.columns.astype(int)
     df_pred.columns = df_pred.columns.astype(int)
-
+    
     df_trues_stats = pd.concat([df_true.mean(axis=0), df_true.min(axis=0), df_true.max(axis=0)], axis=1).reset_index()
     df_trues_stats.columns = ["Training Iterations", "Ave True E", "Min True E", "Max True E"]
-
+    
     df_preds_stats = pd.concat([df_pred.mean(axis=0), df_pred.min(axis=0), df_pred.max(axis=0)], axis=1).reset_index()
     df_preds_stats.columns = ["Training Iterations", "Ave Pred E", "Min Pred E", "Max Pred E"]
-
+    
     fig = (
         df_trues_stats.hvplot.scatter(x="Training Iterations", y="Ave True E", label="Mean True Energies") *
         df_trues_stats.hvplot.line(x="Training Iterations", y="Ave True E", alpha=0.5, linewidth=1) *
@@ -334,7 +302,7 @@ def main():
     fig = fig * hv.Curve([[0, grd_E], [n_epochs+1, grd_E]], label="Ground State Energy").opts(color="k", alpha=0.4, linestyle="dashed")
     fig = fig.opts(ylabel="Sequence Energies", title="GQE Evaluations", fig_size=600, fontscale=2)
     hv.save(fig, f"{dir}/eval_fig.png")
-
+    
     true_Es_g = np.concatenate(true_Es_g, axis=1)
     df_gen = pd.DataFrame(true_Es_g)
     df_gen.columns = df_gen.columns.astype(int)
@@ -347,16 +315,16 @@ def main():
     )
     gen_fig = gen_fig.opts(ylabel="Sequence Energies", title="Generated Training Data", fig_size=600, fontscale=2)
     hv.save(gen_fig, f"{dir}/gen_fig.png")
-
+    
     save_dict = {
         "model_state_dict": model.state_dict(),
         "optimizer_state_dict": opt.state_dict(),
     }
     torch.save(save_dict, f"{dir}/final.pt")
-
+    
     with open(f"{dir}/config.json", "w") as f:
         json.dump(model.config.__dict__, f, indent=4)
-
+    
     metadata = {
         "num_qubits": num_qubits,
         "ham_label": ham_label,
@@ -365,13 +333,14 @@ def main():
         "seq gen": seq_gen,
         "n batches": n_batches,
         "weight beta": beta,
-        "lowest avg energy": min(best_checkpoint_energies),
+        "lowest energy": best_min,
+        "best epoch": best_epoch,
         "best checkpoints": best_checkpoints,
         "final_loss": float(loss.item()),
         "min_mae": float(current_mae),
         "temperature": temperature,
     }
-
+    
     with open(f"{dir}/metadata.json", "w") as f:
         json.dump(metadata, f, indent=4)
 
