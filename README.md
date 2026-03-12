@@ -96,7 +96,7 @@ n_embd = 512            # Embedding dimension
 ```
 SpinGQE/
 ├── train.py                # Main training script
-├── GPTQE.py                # GQE model class with loss functions
+├── SpinGQE.py              # GQE model class with loss functions
 ├── model.py                # Transformer architecture (nano-GPT based)
 ├── hamiltonian.py          # Hamiltonian generation utilities
 ├── requirements.txt        # Python dependencies
@@ -107,7 +107,7 @@ SpinGQE/
 ### File Descriptions
 
 - **`train.py`**: Main entry point for training. Handles data generation, training loop, evaluation, and checkpointing.
-- **`GPTQE.py`**: Extends the base GPT model with GQE-specific functionality:
+- **`SpinGQE.py`**: Extends the base GPT model with GQE-specific functionality:
   - Weighted MSE loss for energy matching
   - Alternative loss functions (GRPO, DPO, CPO)
   - Circuit generation with logit accumulation
