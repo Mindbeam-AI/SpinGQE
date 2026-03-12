@@ -1,5 +1,5 @@
 import torch
-from GPTQE import GPTQE
+from SpinGQE import SpinGQE
 from model import GPTConfig
 import numpy as np
 from hamiltonian import gen_hamiltonian
@@ -131,7 +131,7 @@ def main():
     if load_model:
         model, opt = load_model("heisenberg_(t=.5,b=1)*")
     else:
-        model = GPTQE(GPTConfig(
+        model = SpinGQE(GPTConfig(
             vocab_size=op_pool_size + 1,
             block_size=seq_len,
             dropout=0.2,

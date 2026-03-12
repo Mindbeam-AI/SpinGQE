@@ -66,7 +66,7 @@ This will:
 - Use the 4-qubit Heisenberg Hamiltonian (label 1)
 - Generate circuits of length 12
 - Train for 700 epochs
-- Save results to `heisenberg_extraangles_withbeta/`
+- Save results to `heisenberg/`
 
 ### Key Hyperparameters
 
@@ -80,27 +80,28 @@ seq_len = 12            # Circuit length (number of gates)
 
 # Training parameters
 n_epochs = 700          # Training epochs
-seq_gen = 80            # Circuits generated per epoch
+seq_gen = 10            # Circuits generated per epoch
 n_batches = 10          # Batches per epoch
-temperature = 0.1       # Generation temperature
-beta = 0.1              # Energy weighting parameter
+temperature = 0.5       # Generation temperature
+beta = 0.3              # Energy weighting parameter
 
 # Model architecture
-n_layer = 4             # Transformer layers
+n_layer = 12            # Transformer layers
 n_head = 8              # Attention heads
-n_embd = 384            # Embedding dimension
+n_embd = 512            # Embedding dimension
 ```
 
 ## Repository Structure
 
 ```
 SpinGQE/
-├── train.py           # Main training script
-├── GPTQE.py          # GQE model class with loss functions
-├── model.py          # Transformer architecture (nano-GPT based)
-├── hamiltonian.py    # Hamiltonian generation utilities
-├── requirements.txt  # Python dependencies
-└── README.md         # This file
+├── train.py                # Main training script
+├── GPTQE.py                # GQE model class with loss functions
+├── model.py                # Transformer architecture (nano-GPT based)
+├── hamiltonian.py          # Hamiltonian generation utilities
+├── requirements.txt        # Python dependencies
+├── postprocessing.ipynb    # Postprocessing optimization algorithms
+└── README.md               # This file
 ```
 
 ### File Descriptions
@@ -112,6 +113,8 @@ SpinGQE/
   - Circuit generation with logit accumulation
 - **`model.py`**: Transformer architecture based on nano-GPT
 - **`hamiltonian.py`**: Functions to generate various spin Hamiltonians (labels 0-5)
+- **`postprocessing.ipynb`**: Contains final model evaluation, checkpoint averaging and postprocessing optimization algorithms
+
 
 ## Usage Examples
 
@@ -188,7 +191,7 @@ The training script automatically generates:
 
 ## Reproducing Paper Results
 
-### Antiferromagnetic Regime (h = J = 10)
+### Antiferromagnetic Regime (J = h = 10)
 
 ```python
 # In train.py, set:
@@ -205,27 +208,20 @@ n_epochs = 700
 n_layer = 12
 n_head = 8
 n_embd = 512
+
+ham = gen_hamiltonian(ham_label, num_qubits, 10, 10)
 ```
 
 Expected results:
 - Pre-optimization: ~-60.78 J
 - Post-optimization: ~-64.64 J (near-exact)
 
-### Field-Dominated Regime (h = 10, J = 1)
+### Field-Dominated Regime (J = 1, h = 10)
 
-Modify the Hamiltonian generation in `hamiltonian.py`:
+Modify the Hamiltonian parameters in the gen_hamiltonian function:
 
 ```python
-def one(num_qubits):
-    ops = []
-    coeffs = []
-    for i in range(num_qubits-1):
-        ops.append(PauliX(i) @ PauliX(i+1) + PauliY(i) @ PauliY(i+1) + PauliZ(i) @ PauliZ(i+1))
-        coeffs.append(1)  # J = 1
-    for i in range(num_qubits):
-        ops.append(PauliZ(i))
-        coeffs.append(10)  # h = 10
-    return Hamiltonian(coeffs, ops)
+    ham = gen_hamiltonian(ham_label, num_qubits, 1, 10)
 ```
 
 Expected results:

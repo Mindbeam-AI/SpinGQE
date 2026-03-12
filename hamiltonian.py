@@ -8,27 +8,27 @@ def sum_to_hamiltonian(op_sum):
     return Hamiltonian(coeffs, ops)
 
 
-def zero(num_qubits):
+def zero(num_qubits, j1=1, j2=2):
     ops = []
     coeffs = []
     for i in range(num_qubits-1):
         ops.append(PauliZ(i) @ PauliZ(i+1))
-        coeffs.append(1)
+        coeffs.append(j1)
     for i in range(num_qubits):
         ops.append(PauliX(i))
-        coeffs.append(2)
+        coeffs.append(j2)
     return Hamiltonian(coeffs, ops)
 
 
-def one(num_qubits):
+def one(num_qubits, j1=1, j2=2):
   ops = []
   coeffs = []
   for i in range(num_qubits-1):
     ops.append(PauliX(i) @ PauliX(i+1) + PauliY(i) @ PauliY(i+1) + PauliZ(i) @ PauliZ(i+1))
-    coeffs.append(1)
+    coeffs.append(j1)
   for i in range(num_qubits):
     ops.append(PauliZ(i))
-    coeffs.append(2)
+    coeffs.append(j2)
   return Hamiltonian(coeffs, ops)
 
 def two(num_qubits):
@@ -39,15 +39,15 @@ def two(num_qubits):
     coeffs.append(1+1.5*pow(-1, i))
   return Hamiltonian(coeffs, ops)
 
-def three(num_qubits):
+def three(num_qubits, j1=1, j2=3):
   ops = []
   coeffs = []
   for i in range(num_qubits-1):
     ops.append(PauliX(i) @ PauliX(i+1) + PauliY(i) @ PauliY(i+1) + PauliZ(i) @ PauliZ(i+1))
-    coeffs.append(1)
+    coeffs.append(j1)
   for i in range(num_qubits-2):
     ops.append(PauliX(i) @ PauliX(i+2) + PauliY(i) @ PauliY(i+2) + PauliZ(i) @ PauliZ(i+2))
-    coeffs.append(3)
+    coeffs.append(j2)
   return Hamiltonian(coeffs, ops)
 
 def four(num_qubits):
@@ -116,15 +116,15 @@ def five(num_qubits):
   return sum_to_hamiltonian(H_q)
 
 
-def gen_hamiltonian(label, num_qubits):
+def gen_hamiltonian(label, num_qubits, j1, j2):
   if label == 0:
-    return zero(num_qubits)
+    return zero(num_qubits, j1, j2)
   elif label == 1:
-    return one(num_qubits)
+    return one(num_qubits, j1, j2)
   elif label == 2:
     return two(num_qubits)
   elif label == 3:
-    return three(num_qubits)
+    return three(num_qubits, j1, j2)
   elif label == 4:
     return four(num_qubits)
   elif label == 5:
