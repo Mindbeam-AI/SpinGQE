@@ -27,7 +27,7 @@ This repository implements the SpinGQE, a novel approach to quantum ground state
 1. Clone the repository:
 ```bash
 git clone https://github.com/Mindbeam-AI/SpinGQE.git
-cd GPT-QE
+cd SpinGQE
 ```
 
 2. Create a virtual environment (recommended):
@@ -221,7 +221,7 @@ Expected results:
 Modify the Hamiltonian parameters in the gen_hamiltonian function:
 
 ```python
-    ham = gen_hamiltonian(ham_label, num_qubits, 1, 10)
+ham = gen_hamiltonian(ham_label, num_qubits, 1, 10)
 ```
 
 Expected results:
