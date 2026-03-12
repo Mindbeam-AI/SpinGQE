@@ -76,7 +76,7 @@ def load_model(load_dir):
     with open(f"{load_dir}/config.json") as f:
         config = json.load(f)
 
-        model = GPTQE(GPTConfig(
+        model = SpinGQE(GPTConfig(
             vocab_size=config["vocab_size"],
             block_size=config["block_size"],
             dropout=config["dropout"],
