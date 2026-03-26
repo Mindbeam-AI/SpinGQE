@@ -1,6 +1,6 @@
 # SpinGQE - A generative quantum eigensolver for spin Hamiltonians
 
-[![arXiv](https://img.shields.io/badge/arXiv-XXXX.XXXXX-b31b1b.svg)](https://arxiv.org/abs/XXXX.XXXXX)
+[![arXiv](https://img.shields.io/badge/arXiv-2603.24298-b31b1b.svg)](https://arxiv.org/abs/2603.24298)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
