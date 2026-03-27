@@ -369,7 +369,7 @@ If you use this code in your research, please cite:
 @article{holden2026gqe,
   title={SpinGQE - A generative quantum eigensolver for spin Hamiltonians},
   author={Holden, Alexander and Rahat, Moinul Hossain and Dade, Nii Osae Osae},
-  journal={arXiv preprint arXiv:XXXX.XXXXX},
+  journal={arXiv preprint arXiv:2603.24298},
   year={2026}
 }
 ```
@@ -393,4 +393,4 @@ We thank the authors of the VQE ground state dataset for making their data publi
 
 ---
 
-**Mindbeam AI** | [Website](https://mindbeam.ai) | [Research](https://mindbeam.ai/research)
+**Mindbeam AI** | [Website](https://mindbeam.ai)
